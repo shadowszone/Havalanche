@@ -8,6 +8,10 @@ from defillama_tools import get_token_price
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("👋 Welcome to the Avalanche Security & Dev Bot!")
 
+
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("To get started this are a list of commands /n check_token ")
+
 async def check_token(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         address = context.args[0]
