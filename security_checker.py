@@ -1,14 +1,22 @@
-import requests
-from config import SNOWTRACE_API_KEY
+from web3 import Web3
+from config import AVALANCHE_RPC_URL
+
+w3 = Web3(Web3.HTTPProvider(AVALANCHE_RPC_URL))
 
 def check_token_risk(address):
-    url = f"https://api.snowtrace.io/api?module=contract&action=getsourcecode&address={address}&apikey={SNOWTRACE_API_KEY}"
-    data = requests.get(url).json()["result"][0]
-
     issues = []
-    if not data["SourceCode"]:
-        issues.append("❌ Contract not verified")
-    if "Ownable" in data["ABI"] and "renounceOwnership" not in data["SourceCode"]:
-        issues.append("❌ Ownership not renounced")
 
-    return "🔍 Scam Check:\n" + "\n".join(issues) if issues else "✅ No obvious red flags"
+    try:
+        code = w3.eth.get_code(Web3.to_checksum_address(address))
+        if code == b'':
+            issues.append("❌ Contract code not found — not deployed?")
+        else:
+            issues.append("✅ Contract code exists")
+
+        # Add dummy check — real logic needs ABI or source info
+        issues.append("⚠️ Ownership renounce not verified (ABI required)")
+
+    except Exception as e:
+        issues.append(f"⚠️ Error checking contract: {str(e)}")
+
+    return "🔍 Scam Check:\n" + "\n".join(issues)
