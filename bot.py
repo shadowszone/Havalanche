@@ -1,4 +1,5 @@
 import json
+import requests
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 from config import TELEGRAM_BOT_TOKEN
@@ -25,6 +26,7 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/get_abi <contract_address> — Fetch and display the verified ABI\n"
         "/read_method <contract_address> <method_name> — Call a view method\n"
         "/get_price <coingecko_id> — Get real-time price from DeFiLlama\n"
+        "/my_wallet — View your connected wallet address\n"
     )
     await update.message.reply_text(help_text)
 
@@ -76,15 +78,43 @@ async def getprice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
 
+# ✅ /my_wallet command
+async def my_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    telegram_id = update.message.from_user.id
+    try:
+        response = requests.get("https://your-server.com/wallets")  # <-- change this to your server
+        all_wallets = response.json()
+        wallet = all_wallets.get(str(telegram_id), None)
+
+        if wallet:
+            await update.message.reply_text(f"🔐 Your linked wallet: `{wallet}`", parse_mode="Markdown")
+        else:
+            await update.message.reply_text("⚠️ You haven't linked a wallet yet. Use /start to connect.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error fetching wallet: {e}")
+
 # ✅ WebApp data handler
 async def handle_webapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         data = json.loads(update.message.web_app_data.data)
         wallet = data.get("address", None)
-        if wallet:
+        telegram_id = update.message.from_user.id
+
+        if not wallet:
+            await update.message.reply_text("❌ Could not extract wallet address.")
+            return
+
+        # Send to miniapp backend
+        response = requests.post(
+            "https://your-server.com/register",  # <-- replace with your backend
+            json={"telegram_id": telegram_id, "address": wallet}
+        )
+
+        if response.status_code == 200:
             await update.message.reply_text(f"✅ Connected wallet: `{wallet}`", parse_mode="Markdown")
         else:
-            await update.message.reply_text("❌ Could not extract wallet address.")
+            await update.message.reply_text("⚠️ Wallet received, but backend rejected the request.")
+
     except Exception as e:
         await update.message.reply_text(f"❌ WebApp Error: {e}")
 
@@ -98,6 +128,7 @@ app.add_handler(CommandHandler("check_token", check_token))
 app.add_handler(CommandHandler("get_abi", getabi))
 app.add_handler(CommandHandler("read_method", readmethod))
 app.add_handler(CommandHandler("get_price", getprice))
+app.add_handler(CommandHandler("my_wallet", my_wallet))
 app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_webapp))
 
 # ✅ Run bot
