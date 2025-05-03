@@ -9,7 +9,7 @@ from defillama_tools import get_token_price
 # ✅ /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔗 Connect Wallet (Mini App)", web_app=WebAppInfo(url="https://your-domain.com/"))]
+        [InlineKeyboardButton("🔗 Connect Wallet (Mini App)", web_app=WebAppInfo(url="https://havalanche.vercel.app/"))]
     ])
     await update.message.reply_text(
         "👋 Welcome to the Havalanche Security & Dev Bot!\nUse /help to see available commands.\n\n"
