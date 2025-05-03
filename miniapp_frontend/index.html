@@ -6,13 +6,13 @@
   <title>Connect Wallet - Havalanche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/web3@latest/dist/web3.min.js"></script>
-  <script src="https://unpkg.com/@walletconnect/web3-provider/dist/umd/index.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.8.2/web3.min.js"></script>
+  <script src="https://unpkg.com/@walletconnect/web3-provider@2.0.0/dist/umd/index.min.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
       background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-      color: #ffffff;
+      color: #000;
       text-align: center;
       padding: 40px 20px;
       animation: fadeIn 1.5s ease-in;
@@ -26,7 +26,6 @@
     p {
       font-size: 1rem;
       margin-bottom: 2rem;
-      color: #f3f3f3;
     }
 
     #connect {
@@ -73,34 +72,32 @@
 
   <button id="connect">Connect Wallet</button>
 
-  <script>
+  <script type="module">
+    import WalletConnectProvider from "https://unpkg.com/@walletconnect/web3-provider@2.0.0/dist/umd/index.min.js";
+
     document.getElementById('connect').onclick = async () => {
-      const provider = new WalletConnectProvider.default({
-        rpc: {
-          43114: "https://api.avax.network/ext/bc/C/rpc"
-        },
-        chainId: 43114
-      });
-
       try {
-        await provider.enable();
-        const web3 = new Web3(provider);
-        const accounts = await web3.eth.getAccounts();
-        const walletAddress = accounts[0];
-
-        const payload = {
-          address: walletAddress,
-          telegram_id: Telegram.WebApp.initDataUnsafe.user?.id
-        };
-
-        // Send wallet + Telegram ID to backend
-        await fetch("https://your-server.com/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+        const provider = new WalletConnectProvider.default({
+          rpc: {
+            43114: "https://api.avax.network/ext/bc/C/rpc"
+          },
+          chainId: 43114,
+          qrcodeModalOptions: {
+            mobileLinks: ["core", "metamask", "trust"]
+          }
         });
 
-        Telegram.WebApp.sendData(JSON.stringify({ address: walletAddress }));
+        await provider.enable();
+
+        const web3 = new Web3(provider);
+        const accounts = await web3.eth.getAccounts();
+        const wallet = accounts[0];
+
+        const message = "Confirm connection to Havalanche.";
+        const signature = await web3.eth.personal.sign(message, wallet, "");
+
+        Telegram.WebApp.sendData(JSON.stringify({ address: wallet, signature }));
+
       } catch (error) {
         alert("Wallet connection failed: " + error.message);
       }
