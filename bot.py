@@ -1,5 +1,6 @@
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import json
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 from config import TELEGRAM_BOT_TOKEN
 from security_checker import check_token_risk
 from dev_tools import get_abi, read_method
@@ -7,7 +8,14 @@ from defillama_tools import get_token_price
 
 # ✅ /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Welcome to the Havalanche Security & Dev Bot!\nUse /help to see available commands.")
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔗 Connect Wallet (Mini App)", web_app=WebAppInfo(url="https://your-domain.com/"))]
+    ])
+    await update.message.reply_text(
+        "👋 Welcome to the Havalanche Security & Dev Bot!\nUse /help to see available commands.\n\n"
+        "Or launch the Mini App to connect your wallet:",
+        reply_markup=keyboard
+    )
 
 # ✅ /help command
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -37,7 +45,7 @@ async def getabi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         address = context.args[0]
         abi = get_abi(address)
         if abi:
-            trimmed = abi[:4000]  # Telegram max char per message is ~4096
+            trimmed = abi[:4000]  # Telegram max message limit
             await update.message.reply_text(trimmed)
         else:
             await update.message.reply_text("⚠️ ABI not found or contract not verified.")
@@ -68,6 +76,18 @@ async def getprice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
 
+# ✅ WebApp data handler
+async def handle_webapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        data = json.loads(update.message.web_app_data.data)
+        wallet = data.get("address", None)
+        if wallet:
+            await update.message.reply_text(f"✅ Connected wallet: `{wallet}`", parse_mode="Markdown")
+        else:
+            await update.message.reply_text("❌ Could not extract wallet address.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ WebApp Error: {e}")
+
 # ✅ Application setup
 app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 
@@ -78,6 +98,7 @@ app.add_handler(CommandHandler("check_token", check_token))
 app.add_handler(CommandHandler("get_abi", getabi))
 app.add_handler(CommandHandler("read_method", readmethod))
 app.add_handler(CommandHandler("get_price", getprice))
+app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_webapp))
 
 # ✅ Run bot
 if __name__ == "__main__":
