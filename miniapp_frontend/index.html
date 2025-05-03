@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Connect Wallet</title>
+  <script src="https://unpkg.com/@walletconnect/web3-provider/dist/umd/index.min.js"></script>
+</head>
+<body>
+  <h2>Connect Your Avalanche Wallet</h2>
+  <button id="connect">Connect Wallet</button>
+  <script>
+    document.getElementById('connect').onclick = async () => {
+      const provider = new window.WalletConnectProvider.default({
+        rpc: {
+          43114: "https://api.avax.network/ext/bc/C/rpc"
+        },
+        chainId: 43114
+      });
+      await provider.enable();
+      const address = provider.accounts[0];
+      Telegram.WebApp.sendData(JSON.stringify({ address }));
+    };
+  </script>
+</body>
+</html>
