@@ -2,54 +2,62 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Connect Wallet - Havalanche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/web3@1.8.2/dist/web3.min.js"></script>
   <script type="module">
-    import { Web3Modal } from "https://unpkg.com/@web3modal/web3modal/dist/index.bundle.js";
-    import { WalletConnectProvider } from "https://unpkg.com/@walletconnect/web3-provider/dist/umd/index.min.js";
-    import { Avalanche } from "https://cdn.jsdelivr.net/npm/avalanche@5.0.1/dist/avalanche.bundle.min.js";
+    import { Web3Modal } from "https://unpkg.com/web3modal@1.9.0/dist/index.bundle.js";
+    import WalletConnectProvider from "https://unpkg.com/@walletconnect/web3-provider@1.6.6/dist/umd/index.min.js";
 
-    // Initialize Web3Modal
-    const modal = new Web3Modal({
-      cacheProvider: true,
-      providerOptions: {
-        walletconnect: {
-          package: WalletConnectProvider,
-          options: {
-            rpc: {
-              43114: "https://api.avax.network/ext/bc/C/rpc"
-            },
-            chainId: 43114
-          }
+    const providerOptions = {
+      walletconnect: {
+        package: WalletConnectProvider,
+        options: {
+          rpc: {
+            43114: "https://api.avax.network/ext/bc/C/rpc"
+          },
+          chainId: 43114
         }
       }
+    };
+
+    const web3Modal = new Web3Modal({
+      cacheProvider: false,
+      providerOptions
     });
 
-    document.getElementById("connect").onclick = async () => {
-      try {
-        // Open Web3Modal
-        const instance = await modal.connect();
-        const web3 = new Avalanche.Web3(instance);
-        
-        // Get account details
-        const accounts = await web3.eth.getAccounts();
-        const address = accounts[0];
+    window.addEventListener("DOMContentLoaded", () => {
+      const connectBtn = document.getElementById("connect");
 
-        // Send wallet address to Telegram WebApp
-        Telegram.WebApp.sendData(JSON.stringify({ address }));
+      connectBtn.onclick = async () => {
+        console.log("Connect button clicked!");
+        try {
+          const provider = await web3Modal.connect();
+          const web3 = new Web3(provider);
 
-        alert(`Connected to wallet: ${address}`);
-      } catch (error) {
-        alert("Error connecting to wallet: " + error);
-      }
-    };
+          const accounts = await web3.eth.getAccounts();
+          const address = accounts[0];
+
+          if (address) {
+            console.log(`Connected to wallet: ${address}`);
+            Telegram.WebApp.sendData(JSON.stringify({ address }));
+            alert(`Connected to wallet: ${address}`);
+          } else {
+            alert("No account found");
+          }
+        } catch (error) {
+          console.error("Error connecting to wallet:", error);
+          alert("Error connecting to wallet. Please try again.");
+        }
+      };
+    });
   </script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(to right, #ff5733, #ffffff);
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
       color: #ffffff;
       text-align: center;
       padding: 40px 20px;
