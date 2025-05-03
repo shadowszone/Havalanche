@@ -10,10 +10,10 @@
   <script type="module">
     import { EthereumClient, w3mConnectors, w3mProvider } from "https://unpkg.com/@web3modal/ethereum@2.5.2"
     import { Web3Modal } from "https://unpkg.com/@web3modal/html@2.5.2"
-    import { configureChains, createConfig, getAccount, watchAccount } from "https://unpkg.com/@wagmi/core@1.5.2"
+    import { configureChains, createConfig, watchAccount } from "https://unpkg.com/@wagmi/core@1.5.2"
     import { avalanche } from "https://unpkg.com/@wagmi/core@1.5.2/chains"
 
-    const projectId = 'b4ab00ce50166394adba378df1461854'
+    const projectId = 'b4ab00ce50166394adba378df1461854';
 
     const { chains, publicClient } = configureChains([avalanche], [w3mProvider({ projectId })])
 
@@ -21,23 +21,34 @@
       autoConnect: true,
       connectors: w3mConnectors({ projectId, chains }),
       publicClient
-    })
+    });
 
-    const ethereumClient = new EthereumClient(wagmiConfig, chains)
-    const modal = new Web3Modal({ projectId, themeMode: 'dark' }, ethereumClient)
+    const ethereumClient = new EthereumClient(wagmiConfig, chains);
+    const modal = new Web3Modal({ projectId, themeMode: 'dark' }, ethereumClient);
 
     window.addEventListener("DOMContentLoaded", () => {
       const connectBtn = document.getElementById("connect")
+
       connectBtn.onclick = async () => {
-        await modal.openModal()
-        const unwatch = watchAccount((account) => {
-          if (account.address) {
-            Telegram.WebApp.sendData(JSON.stringify({ address: account.address }))
-            unwatch()
-          }
-        })
+        console.log("Connect button clicked");
+
+        try {
+          await modal.openModal();
+          const unwatch = watchAccount((account) => {
+            console.log("Account state changed", account);
+
+            if (account.address) {
+              Telegram.WebApp.sendData(JSON.stringify({ address: account.address }));
+              alert(`Connected to wallet: ${account.address}`);
+              unwatch();
+            }
+          });
+        } catch (err) {
+          console.error("Wallet modal failed:", err);
+          alert("WalletConnect failed. Try again.");
+        }
       }
-    })
+    });
   </script>
 
   <style>
