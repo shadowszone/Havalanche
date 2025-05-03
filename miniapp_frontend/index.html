@@ -6,54 +6,40 @@
   <title>Connect Wallet - Havalanche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/web3@1.8.2/dist/web3.min.js"></script>
+
   <script type="module">
-    import { Web3Modal } from "https://unpkg.com/web3modal@1.9.0/dist/index.bundle.js";
-    import WalletConnectProvider from "https://unpkg.com/@walletconnect/web3-provider@1.6.6/dist/umd/index.min.js";
+    import { EthereumClient, w3mConnectors, w3mProvider } from "https://unpkg.com/@web3modal/ethereum@2.5.2"
+    import { Web3Modal } from "https://unpkg.com/@web3modal/html@2.5.2"
+    import { configureChains, createConfig, getAccount, watchAccount } from "https://unpkg.com/@wagmi/core@1.5.2"
+    import { avalanche } from "https://unpkg.com/@wagmi/core@1.5.2/chains"
 
-    const providerOptions = {
-      walletconnect: {
-        package: WalletConnectProvider,
-        options: {
-          rpc: {
-            43114: "https://api.avax.network/ext/bc/C/rpc"
-          },
-          chainId: 43114
-        }
-      }
-    };
+    const projectId = 'b4ab00ce50166394adba378df1461854'
 
-    const web3Modal = new Web3Modal({
-      cacheProvider: false,
-      providerOptions
-    });
+    const { chains, publicClient } = configureChains([avalanche], [w3mProvider({ projectId })])
+
+    const wagmiConfig = createConfig({
+      autoConnect: true,
+      connectors: w3mConnectors({ projectId, chains }),
+      publicClient
+    })
+
+    const ethereumClient = new EthereumClient(wagmiConfig, chains)
+    const modal = new Web3Modal({ projectId, themeMode: 'dark' }, ethereumClient)
 
     window.addEventListener("DOMContentLoaded", () => {
-      const connectBtn = document.getElementById("connect");
-
+      const connectBtn = document.getElementById("connect")
       connectBtn.onclick = async () => {
-        console.log("Connect button clicked!");
-        try {
-          const provider = await web3Modal.connect();
-          const web3 = new Web3(provider);
-
-          const accounts = await web3.eth.getAccounts();
-          const address = accounts[0];
-
-          if (address) {
-            console.log(`Connected to wallet: ${address}`);
-            Telegram.WebApp.sendData(JSON.stringify({ address }));
-            alert(`Connected to wallet: ${address}`);
-          } else {
-            alert("No account found");
+        await modal.openModal()
+        const unwatch = watchAccount((account) => {
+          if (account.address) {
+            Telegram.WebApp.sendData(JSON.stringify({ address: account.address }))
+            unwatch()
           }
-        } catch (error) {
-          console.error("Error connecting to wallet:", error);
-          alert("Error connecting to wallet. Please try again.");
-        }
-      };
-    });
+        })
+      }
+    })
   </script>
+
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -116,7 +102,6 @@
   <img src="1000291145-removebg-preview.png" alt="Avalanche Logo" class="logo" />
   <h1>Welcome to Havalanche</h1>
   <p>Your decentralized guardian for safe and secure interactions on the Avalanche blockchain.</p>
-
   <button id="connect">Connect Wallet</button>
 </body>
 </html>
