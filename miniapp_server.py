@@ -1,27 +1,55 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 
+# Initialize Flask app and database
 app = Flask(__name__)
-CORS(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///wallets.db'  # Use SQLite to store wallets
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-# Temporary in-memory storage (use database in production)
-wallet_registry = {}
+# Wallet Model: Store Telegram ID and associated wallet address
+class Wallet(db.Model):
+    telegram_id = db.Column(db.String(50), primary_key=True)
+    address = db.Column(db.String(255), nullable=False)
 
-@app.route("/register", methods=["POST"])
+    def __init__(self, telegram_id, address):
+        self.telegram_id = telegram_id
+        self.address = address
+
+    def to_dict(self):
+        return {"telegram_id": self.telegram_id, "address": self.address}
+
+# Create database tables
+with app.app_context():
+    db.create_all()
+
+@app.route('/register', methods=['POST'])
 def register_wallet():
     data = request.get_json()
-    telegram_id = data.get("telegram_id")
-    address = data.get("address")
+    telegram_id = data.get('telegram_id')
+    address = data.get('address')
 
     if not telegram_id or not address:
-        return jsonify({"error": "Missing telegram_id or address"}), 400
+        return jsonify({"message": "Telegram ID and address are required!"}), 400
 
-    wallet_registry[telegram_id] = address
-    return jsonify({"message": "Wallet connected successfully!"}), 200
+    # Check if wallet already exists
+    existing_wallet = Wallet.query.get(telegram_id)
+    if existing_wallet:
+        existing_wallet.address = address  # Update existing address
+        db.session.commit()
+        return jsonify({"message": f"Wallet address updated for Telegram ID {telegram_id}."})
 
-@app.route("/wallets", methods=["GET"])
-def get_all_wallets():
-    return jsonify(wallet_registry)
+    # Create new wallet entry
+    new_wallet = Wallet(telegram_id=telegram_id, address=address)
+    db.session.add(new_wallet)
+    db.session.commit()
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    return jsonify({"message": "Wallet registered successfully!"})
+
+@app.route('/wallets', methods=['GET'])
+def get_wallets():
+    wallets = Wallet.query.all()
+    return jsonify([wallet.to_dict() for wallet in wallets])
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
