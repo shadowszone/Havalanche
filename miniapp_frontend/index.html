@@ -6,11 +6,12 @@
   <title>Connect Wallet - Havalanche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/web3@latest/dist/web3.min.js"></script>
   <script src="https://unpkg.com/@walletconnect/web3-provider/dist/umd/index.min.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      background: linear-gradient(to right, #7f0000, #b71c1c, #ffffff);
       color: #ffffff;
       text-align: center;
       padding: 40px 20px;
@@ -25,7 +26,7 @@
     p {
       font-size: 1rem;
       margin-bottom: 2rem;
-      color: #d0d0d0;
+      color: #f3f3f3;
     }
 
     #connect {
@@ -74,15 +75,35 @@
 
   <script>
     document.getElementById('connect').onclick = async () => {
-      const provider = new window.WalletConnectProvider.default({
+      const provider = new WalletConnectProvider.default({
         rpc: {
           43114: "https://api.avax.network/ext/bc/C/rpc"
         },
         chainId: 43114
       });
-      await provider.enable();
-      const address = provider.accounts[0];
-      Telegram.WebApp.sendData(JSON.stringify({ address }));
+
+      try {
+        await provider.enable();
+        const web3 = new Web3(provider);
+        const accounts = await web3.eth.getAccounts();
+        const walletAddress = accounts[0];
+
+        const payload = {
+          address: walletAddress,
+          telegram_id: Telegram.WebApp.initDataUnsafe.user?.id
+        };
+
+        // Send wallet + Telegram ID to backend
+        await fetch("https://your-server.com/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        Telegram.WebApp.sendData(JSON.stringify({ address: walletAddress }));
+      } catch (error) {
+        alert("Wallet connection failed: " + error.message);
+      }
     };
   </script>
 </body>
