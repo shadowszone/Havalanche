@@ -4,14 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Connect Wallet - Havalanche</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  
-  <!-- Ethers.js -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
 
-  <!-- Web3Modal v3 (WalletConnect v2) -->
+  <!-- Web3Modal v3 -->
   <script src="https://unpkg.com/@web3modal/wagmi@2.4.0/dist/index.umd.js"></script>
+  <script src="https://unpkg.com/@wagmi/core@2.5.6/dist/index.umd.js"></script>
 
   <style>
     body {
@@ -20,7 +17,6 @@
       color: #ffffff;
       text-align: center;
       padding: 40px 20px;
-      animation: fadeIn 1.5s ease-in;
     }
 
     #connect {
@@ -39,69 +35,55 @@
       background-color: #cf3434;
     }
 
-    .logo {
-      width: 100px;
-      margin: 0 auto 20px;
-      animation: bounce 2s infinite;
-    }
-
     #wallet-address {
       margin-top: 20px;
       font-size: 0.95rem;
       color: #d0d0d0;
     }
-
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-10px); }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
   </style>
 </head>
 <body>
-  <img src="1000291145-removebg-preview.png" alt="Avalanche Logo" class="logo" />
   <h1>Welcome to Havalanche</h1>
-  <p>Your decentralized guardian for safe and secure interactions on the Avalanche blockchain.</p>
+  <p>Connect your Avalanche wallet securely</p>
 
   <button id="connect">Connect Wallet</button>
   <div id="wallet-address"></div>
 
   <script>
     (async () => {
-      const { createWeb3Modal, defaultWagmiConfig, avalancheFuji, avalanche } = window.w3m;
+      const { createWeb3Modal, defaultWagmiConfig, avalanche } = window.w3m;
+      const { getAccount, getConnectorClient, connect } = window.wagmi;
 
-      const projectId = 'b4ab00ce50166394adba378df1461854'; // Replace with your WalletConnect project ID
-
-      const metadata = {
-        name: 'Havalanche',
-        description: 'Secure Avalanche Wallet Connect',
-        url: 'https://yourdomain.com',
-        icons: ['https://avatars.githubusercontent.com/u/37784886']
-      };
-
+      const projectId = 'b4ab00ce50166394adba378df1461854';
       const chains = [avalanche];
-      const wagmiConfig = defaultWagmiConfig({ chains, projectId, metadata });
-      const modal = createWeb3Modal({ wagmiConfig, projectId, chains });
 
-      const { getAccount, connect, disconnect } = window.wagmi;
+      const wagmiConfig = defaultWagmiConfig({
+        chains,
+        projectId,
+        metadata: {
+          name: 'Havalanche',
+          description: 'Telegram Mini App',
+          url: 'https://yourdomain.com',
+          icons: ['https://yourdomain.com/icon.png']
+        }
+      });
 
+      createWeb3Modal({ wagmiConfig, projectId, chains });
+
+      // Connect wallet on button click
       document.getElementById('connect').onclick = async () => {
         try {
-          await connect({ connector: 'walletConnect' });
-          const { address } = getAccount();
+          const result = await connect({ connector: window.wagmi.connectors.walletConnect });
+          const account = getAccount();
+          document.getElementById('wallet-address').textContent = `Connected: ${account.address}`;
 
-          document.getElementById('wallet-address').textContent = `Connected: ${address}`;
-
-          // Send to Telegram WebApp
+          // Send to Telegram
           if (window.Telegram && Telegram.WebApp) {
-            Telegram.WebApp.sendData(JSON.stringify({ address }));
+            Telegram.WebApp.sendData(JSON.stringify({ address: account.address }));
           }
         } catch (err) {
-          console.error('Connection failed:', err);
+          console.error('Wallet connection error:', err);
+          alert('Failed to connect wallet.');
         }
       };
     })();
