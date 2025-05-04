@@ -6,7 +6,13 @@
   <title>Connect Wallet - Havalanche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/@walletconnect/web3-provider/dist/umd/index.min.js"></script>
+  
+  <!-- Ethers.js -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+
+  <!-- Web3Modal v3 (WalletConnect v2) -->
+  <script src="https://unpkg.com/@web3modal/wagmi@2.4.0/dist/index.umd.js"></script>
+
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -15,17 +21,6 @@
       text-align: center;
       padding: 40px 20px;
       animation: fadeIn 1.5s ease-in;
-    }
-
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-    }
-
-    p {
-      font-size: 1rem;
-      margin-bottom: 2rem;
-      color: #d0d0d0;
     }
 
     #connect {
@@ -50,13 +45,15 @@
       animation: bounce 2s infinite;
     }
 
+    #wallet-address {
+      margin-top: 20px;
+      font-size: 0.95rem;
+      color: #d0d0d0;
+    }
+
     @keyframes bounce {
-      0%, 100% {
-        transform: translateY(0px);
-      }
-      50% {
-        transform: translateY(-10px);
-      }
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
     }
 
     @keyframes fadeIn {
@@ -71,19 +68,43 @@
   <p>Your decentralized guardian for safe and secure interactions on the Avalanche blockchain.</p>
 
   <button id="connect">Connect Wallet</button>
+  <div id="wallet-address"></div>
 
   <script>
-    document.getElementById('connect').onclick = async () => {
-      const provider = new window.WalletConnectProvider.default({
-        rpc: {
-          43114: "https://api.avax.network/ext/bc/C/rpc"
-        },
-        chainId: 43114
-      });
-      await provider.enable();
-      const address = provider.accounts[0];
-      Telegram.WebApp.sendData(JSON.stringify({ address }));
-    };
+    (async () => {
+      const { createWeb3Modal, defaultWagmiConfig, avalancheFuji, avalanche } = window.w3m;
+
+      const projectId = 'b4ab00ce50166394adba378df1461854'; // Replace with your WalletConnect project ID
+
+      const metadata = {
+        name: 'Havalanche',
+        description: 'Secure Avalanche Wallet Connect',
+        url: 'https://yourdomain.com',
+        icons: ['https://avatars.githubusercontent.com/u/37784886']
+      };
+
+      const chains = [avalanche];
+      const wagmiConfig = defaultWagmiConfig({ chains, projectId, metadata });
+      const modal = createWeb3Modal({ wagmiConfig, projectId, chains });
+
+      const { getAccount, connect, disconnect } = window.wagmi;
+
+      document.getElementById('connect').onclick = async () => {
+        try {
+          await connect({ connector: 'walletConnect' });
+          const { address } = getAccount();
+
+          document.getElementById('wallet-address').textContent = `Connected: ${address}`;
+
+          // Send to Telegram WebApp
+          if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.sendData(JSON.stringify({ address }));
+          }
+        } catch (err) {
+          console.error('Connection failed:', err);
+        }
+      };
+    })();
   </script>
 </body>
 </html>
