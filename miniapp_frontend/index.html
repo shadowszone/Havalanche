@@ -64,11 +64,13 @@
 
   <script>
     document.getElementById('connect').onclick = () => {
-      const externalLink = "https://havalanche.vercel.app/connect-wallet"; // The external URL for Web3Modal flow
+      const externalLink = 'https://havalanche.vercel.app/connect-wallet.html'; // The external URL for Web3Modal flow
 
       // Check if it's a Telegram WebApp, prompt to open the link in an external browser
       if (window.Telegram && Telegram.WebApp) {
         Telegram.WebApp.sendData("Please open the link in an external browser to connect your wallet.");
+        // Open the external link in a new window/tab
+        window.open(externalLink, '_blank');
       } else {
         // If not Telegram, just open in the browser directly
         window.open(externalLink, '_blank');
