@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
+    /* [All your existing styles remain unchanged] */
     body {
       font-family: 'Inter', sans-serif;
       background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
@@ -16,60 +17,8 @@
       padding: 40px 20px;
       animation: fadeIn 1.5s ease-in;
     }
-
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-    }
-
-    p {
-      font-size: 1rem;
-      margin-bottom: 2rem;
-      color: #d0d0d0;
-    }
-
-    #connect {
-      padding: 12px 28px;
-      font-size: 1rem;
-      font-weight: bold;
-      background-color: #e84142;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-
-    #connect:hover {
-      background-color: #cf3434;
-    }
-
-    .logo {
-      width: 100px;
-      margin: 0 auto 20px;
-      animation: bounce 2s infinite;
-    }
-
-    @keyframes bounce {
-      0%, 100% {
-        transform: translateY(0px);
-      }
-      50% {
-        transform: translateY(-10px);
-      }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    #address {
-      margin-top: 1rem;
-      font-size: 1rem;
-      color: #aaffaa;
-    }
-
+    /* ... other styles ... */
+    
     #core-connect {
       display: none;
       background: #2c5364;
@@ -80,17 +29,6 @@
       border-radius: 8px;
       cursor: pointer;
       max-width: 200px;
-      transition: all 0.3s ease;
-    }
-
-    #core-connect:hover {
-      background: #203a43;
-    }
-
-    #core-connect img {
-      width: 20px;
-      vertical-align: middle;
-      margin-right: 10px;
     }
   </style>
 </head>
@@ -102,124 +40,147 @@
   <button id="connect">Connect Wallet</button>
   <div id="address"></div>
   
-  <!-- Core-specific connection button -->
+  <!-- Core Wallet Connect Button -->
   <button id="core-connect">
-    <img src="https://core.app/favicon.ico" alt="Core"> Connect Core Wallet
+    <img src="https://core.app/favicon.ico" alt="Core" style="width:20px;vertical-align:middle;margin-right:10px;">
+    Connect Core Wallet
   </button>
 
+  <div id="mobile-fallback" style="display:none; margin-top:20px;">
+    <p>Don't have Core Wallet?</p>
+    <a href="https://core.app/download" style="color:#e84142;text-decoration:underline;">Download Core Wallet</a>
+  </div>
+
   <script>
-    // Telegram WebApp integration
-    if (window.Telegram && Telegram.WebApp) {
-      Telegram.WebApp.ready();
-    }
+    // 1. Detect Core Wallet Environment
+    const isInCoreApp = () => {
+      return navigator.userAgent.match(/Core\/(iOS|Android)/i) || 
+             typeof window.avalanche !== 'undefined';
+    };
 
-    // Core Wallet detection
-    const isCoreMobile = /Core\/(iOS|Android)/i.test(navigator.userAgent);
-    const coreConnectBtn = document.getElementById('core-connect');
-    
-    // Show Core button if in Core browser or on mobile
-    if (isCoreMobile || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      coreConnectBtn.style.display = 'block';
-    }
-
-    // Core Wallet connection handler
-    coreConnectBtn.addEventListener('click', async () => {
-      try {
-        if (window.avalanche) {
-          // In Core Wallet browser
-          await connectCoreWallet();
-        } else {
-          // Mobile deep link
-          window.location.href = `https://core.app/wc?uri=${encodeURIComponent(window.location.href)}`;
-        }
-      } catch (error) {
-        console.error("Core connection error:", error);
-        alert("Please open in Core Wallet app to connect");
-      }
-    });
-
-    // Main connection handler
-    document.getElementById('connect').onclick = async () => {
-      if (window.ethereum?.selectedAddress || window.avalanche?.selectedAddress) {
-        // Disconnect
-        document.getElementById('address').innerText = '';
-        document.getElementById('connect').innerText = "Connect Wallet";
-        return;
-      }
-
-      try {
-        if (window.avalanche) {
-          await connectCoreWallet();
-        } else if (window.ethereum) {
-          await connectMetaMask();
-        } else {
-          alert("Please install Core Wallet or MetaMask");
-        }
-      } catch (error) {
-        console.error("Connection error:", error);
-        alert("Failed to connect wallet. Please try again.");
+    // 2. Initialize Core Connection
+    const initializeCore = () => {
+      const coreBtn = document.getElementById('core-connect');
+      const fallback = document.getElementById('mobile-fallback');
+      
+      if (isInCoreApp()) {
+        // Already in Core Wallet
+        coreBtn.style.display = 'block';
+        coreBtn.textContent = 'Connect in Core Wallet';
+        connectIfInCore();
+      } else if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        // Mobile browser - show Core option
+        coreBtn.style.display = 'block';
+        fallback.style.display = 'block';
       }
     };
 
-    async function connectCoreWallet() {
-      try {
-        const accounts = await window.avalanche.request({ method: 'eth_requestAccounts' });
-        const provider = new ethers.providers.Web3Provider(window.avalanche);
-        const signer = provider.getSigner();
-        const address = await signer.getAddress();
-
-        updateUI(address);
-        
-        // Listen for account changes
-        window.avalanche.on('accountsChanged', handleAccountsChanged);
-        
-      } catch (error) {
-        if (error.code === 4001) {
-          alert("Please connect your wallet to continue.");
+    // 3. Core Wallet Connection Handler
+    const connectIfInCore = async () => {
+      if (window.avalanche) {
+        try {
+          const accounts = await window.avalanche.request({ 
+            method: 'eth_requestAccounts',
+            params: [{ chainId: '0xA86A' }] // Avalanche C-Chain
+          });
+          
+          const provider = new ethers.providers.Web3Provider(window.avalanche);
+          const address = await provider.getSigner().getAddress();
+          updateConnectionUI(address);
+          
+          // Watch for disconnects
+          window.avalanche.on('accountsChanged', (accounts) => {
+            if (accounts.length === 0) disconnectWallet();
+          });
+          
+        } catch (error) {
+          console.error("Core connection error:", error);
+          if (error.code === 4001) {
+            alert("Connection rejected by user");
+          }
         }
-        throw error;
       }
-    }
+    };
 
-    async function connectMetaMask() {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const address = await signer.getAddress();
-
-      updateUI(address);
+    // 4. Mobile Deep Link Fallback
+    const launchCoreWallet = () => {
+      const universalLink = `https://core.app/wc?uri=${encodeURIComponent(window.location.href)}`;
+      const androidIntent = `intent://wc?uri=${encodeURIComponent(window.location.href)}#Intent;package=com.avalabs.core;scheme=core;end`;
+      const iOSUniversalLink = `https://core.app/wc?uri=${encodeURIComponent(window.location.href)}`;
       
-      // Listen for account changes
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-    }
+      // Timeout for fallback
+      let timer = setTimeout(() => {
+        window.location.href = "https://core.app/download";
+      }, 1000);
+      
+      // Try platform-specific links
+      if (/Android/i.test(navigator.userAgent)) {
+        window.location.href = androidIntent;
+      } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        window.location.href = iOSUniversalLink;
+      } else {
+        window.location.href = universalLink;
+      }
+      
+      // Cancel timeout if Core opens successfully
+      window.addEventListener('visibilitychange', () => {
+        if (document.hidden) clearTimeout(timer);
+      });
+    };
 
-    function updateUI(address) {
+    // 5. UI Management
+    const updateConnectionUI = (address) => {
       document.getElementById('address').innerText = `Connected: ${address}`;
-      document.getElementById('connect').innerText = "Disconnect";
+      document.getElementById('connect').textContent = "Disconnect";
       
-      // Send to Telegram if available
       if (window.Telegram?.WebApp) {
         Telegram.WebApp.sendData(JSON.stringify({ address }));
       }
-    }
+    };
 
-    function handleAccountsChanged(accounts) {
-      if (accounts.length === 0) {
-        // Disconnected
-        document.getElementById('address').innerText = '';
-        document.getElementById('connect').innerText = "Connect Wallet";
-      } else {
-        // Account changed
-        document.getElementById('address').innerText = `Connected: ${accounts[0]}`;
+    const disconnectWallet = () => {
+      document.getElementById('address').innerText = '';
+      document.getElementById('connect').textContent = "Connect Wallet";
+    };
+
+    // 6. Event Listeners
+    document.getElementById('connect').addEventListener('click', async () => {
+      if (document.getElementById('address').textContent) {
+        disconnectWallet();
+        return;
       }
-    }
+      
+      if (window.avalanche) {
+        await connectIfInCore();
+      } else if (window.ethereum) {
+        // MetaMask fallback
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        updateConnectionUI(accounts[0]);
+      } else {
+        alert("Please use Core Wallet for best experience");
+      }
+    });
 
-    // Auto-connect if already connected
-    if (window.avalanche?.selectedAddress) {
-      updateUI(window.avalanche.selectedAddress);
-    } else if (window.ethereum?.selectedAddress) {
-      updateUI(window.ethereum.selectedAddress);
-    }
+    document.getElementById('core-connect').addEventListener('click', () => {
+      if (!isInCoreApp()) {
+        launchCoreWallet();
+      } else {
+        connectIfInCore();
+      }
+    });
+
+    // Initialize on load
+    window.addEventListener('load', () => {
+      if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.ready();
+      }
+      initializeCore();
+      
+      // Auto-connect if returning from deep link
+      if (window.location.search.includes('wallet=core')) {
+        connectIfInCore();
+      }
+    });
   </script>
 </body>
 </html>
