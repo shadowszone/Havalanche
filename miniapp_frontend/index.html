@@ -1,66 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Connect Wallet - Havalanche</title>
-  <script src="https://unpkg.com/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
-  <style>
-    body {
-      background: #0f2027;
-      color: white;
-      font-family: sans-serif;
-      text-align: center;
-      padding: 2rem;
-    }
-    button {
-      padding: 12px 24px;
-      font-size: 1rem;
-      background: #e84142;
-      border: none;
-      border-radius: 10px;
-      color: white;
-      cursor: pointer;
-    }
-    #wallet-address {
-      margin-top: 1rem;
-      color: #ccc;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Connect Wallet - Havalanche</title>
+
+  <!-- Fonts & Styling -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: #ffffff;
+      text-align: center;
+      padding: 40px 20px;
+      animation: fadeIn 1.5s ease-in;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 1rem;
+      margin-bottom: 2rem;
+      color: #d0d0d0;
+    }
+
+    #connect {
+      padding: 12px 28px;
+      font-size: 1rem;
+      font-weight: bold;
+      background-color: #e84142;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    #connect:hover {
+      background-color: #cf3434;
+    }
+
+    .logo {
+      width: 100px;
+      margin: 0 auto 20px;
+      animation: bounce 2s infinite;
+    }
+
+    #address {
+      margin-top: 1.5rem;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+
+  <!-- WalletConnect v2 Dependencies -->
+  <script src="https://unpkg.com/@web3modal/html@3.5.1"></script>
+  <script src="https://unpkg.com/@wagmi/core@2.5.6/dist/index.umd.js"></script>
+  <script src="https://unpkg.com/@web3modal/ethereum@3.5.1/dist/index.umd.js"></script>
 </head>
 <body>
+  <img src="1000291145-removebg-preview.png" alt="Avalanche Logo" class="logo" />
+  <h1>Welcome to Havalanche</h1>
+  <p>Your decentralized guardian for safe and secure interactions on the Avalanche blockchain.</p>
 
-  <h1>Connect Wallet</h1>
-  <button id="connect">Connect Wallet</button>
-  <div id="wallet-address"></div>
+  <button id="connect">Connect Wallet</button>
+  <div id="address"></div>
 
-  <script>
-    const provider = new WalletConnectProvider.default({
-      rpc: {
-        43114: "https://api.avax.network/ext/bc/C/rpc"
-      },
-      chainId: 43114,
-    });
+  <script>
+    const { configureChains, createConfig, watchAccount } = window.WagmiCore;
+    const { avalanche } = window.WagmiCoreChains;
+    const { EthereumClient, w3mConnectors, w3mProvider } = window.Web3ModalEthereum;
 
-    document.getElementById('connect').onclick = async () => {
-      try {
-        await provider.enable(); // Triggers QR or opens Core app
-        const web3 = new Web3(provider);
-        const accounts = await web3.eth.getAccounts();
-        const address = accounts[0];
-        document.getElementById('wallet-address').textContent = `Connected: ${address}`;
+    const projectId = 'b4ab00ce50166394adba378df1461854';
+    const chains = [avalanche];
 
-        // Send back to Telegram Mini App
-        if (window.Telegram && Telegram.WebApp) {
-          Telegram.WebApp.sendData(JSON.stringify({ address }));
-        }
-      } catch (err) {
-        alert('Wallet connection failed.');
-        console.error(err);
-      }
-    };
-  </script>
+    const { publicClient } = configureChains(chains, [w3mProvider({ projectId })]);
 
+    const wagmiConfig = createConfig({
+      autoConnect: true,
+      connectors: w3mConnectors({ projectId, chains }),
+      publicClient
+    });
+
+    const ethereumClient = new EthereumClient(wagmiConfig, chains);
+
+    const modal = new window.Web3Modal({
+      projectId,
+      themeMode: 'dark',
+      ethereumClient
+    });
+
+    document.getElementById('connect').onclick = () => {
+      modal.openModal();
+    };
+
+    watchAccount((account) => {
+      if (account.address) {
+        document.getElementById('address').innerText = `Connected: ${account.address}`;
+        if (window.Telegram && Telegram.WebApp) {
+          Telegram.WebApp.sendData(JSON.stringify({ address: account.address }));
+        }
+      }
+    });
+  </script>
 </body>
 </html>
