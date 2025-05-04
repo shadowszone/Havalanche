@@ -6,8 +6,6 @@
   <title>Connect Wallet - Havalanche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <!-- Mobile-friendly Web3 Connection -->
-  <script src="https://cdn.jsdelivr.net/npm/@metamask/onboarding@1.0.1/dist/metamask-onboarding.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
@@ -80,6 +78,33 @@
       margin: 20px auto;
       max-width: 300px;
     }
+
+    #wallet-options {
+      display: none;
+      margin-top: 20px;
+    }
+
+    .wallet-btn {
+      background: #2c5364;
+      border: 1px solid #0f2027;
+      color: white;
+      padding: 10px;
+      margin: 5px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 200px;
+      transition: all 0.3s ease;
+    }
+
+    .wallet-btn:hover {
+      background: #203a43;
+    }
+
+    .wallet-btn img {
+      width: 20px;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
   </style>
 </head>
 <body>
@@ -90,6 +115,18 @@
   <button id="connect">Connect Wallet</button>
   <div id="address"></div>
   <div id="mobile-warning"></div>
+  
+  <div id="wallet-options">
+    <button class="wallet-btn" data-wallet="metamask">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="MetaMask"> MetaMask
+    </button>
+    <button class="wallet-btn" data-wallet="trust">
+      <img src="https://trustwallet.com/assets/images/media/assets/TWT.png" alt="Trust Wallet"> Trust Wallet
+    </button>
+    <button class="wallet-btn" data-wallet="core">
+      <img src="https://core.app/favicon.ico" alt="Core Wallet"> Core Wallet
+    </button>
+  </div>
 
   <script>
     // Telegram WebApp integration
@@ -97,53 +134,48 @@
       Telegram.WebApp.ready();
     }
 
-    // Mobile detection and handling
+    // Mobile detection
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const warningElement = document.getElementById('mobile-warning');
-    let onboarding;
+    const walletOptions = document.getElementById('wallet-options');
 
-    // Initialize MetaMask onboarding
-    if (!window.ethereum) {
-      onboarding = new MetaMaskOnboarding();
+    // Core Wallet deep link
+    function connectCoreWallet() {
+      if (isMobile) {
+        // Mobile deep link
+        window.location.href = `https://core.app/wc?uri=${encodeURIComponent(window.location.href)}`;
+      } else {
+        // Desktop flow
+        if (window.avalanche) {
+          connectWallet();
+        } else {
+          window.open("https://core.app/download", "_blank");
+        }
+      }
     }
 
     // Connection Handler
     document.getElementById('connect').onclick = async () => {
-      const button = document.getElementById('connect');
-      
-      if (window.ethereum?.selectedAddress) {
+      if (window.ethereum?.selectedAddress || window.avalanche?.isConnected?.()) {
         // Disconnect
-        window.ethereum.selectedAddress = null;
         document.getElementById('address').innerText = '';
-        button.innerText = "Connect Wallet";
+        document.getElementById('connect').innerText = "Connect Wallet";
+        walletOptions.style.display = 'none';
         return;
       }
 
+      // Show wallet options on mobile
+      if (isMobile) {
+        walletOptions.style.display = 'block';
+        return;
+      }
+
+      // Desktop flow
       try {
-        if (isMobile) {
-          if (window.ethereum) {
-            await connectWallet();
-          } else {
-            // Mobile without injected provider
-            warningElement.style.display = 'block';
-            warningElement.innerHTML = `
-              Please open in:<br>
-              <a href="https://metamask.app.link/browser/${encodeURIComponent(window.location.href)}" style="color: white;">
-                MetaMask Browser
-              </a><br>or<br>
-              <a href="https://trustwallet.com/browser?url=${encodeURIComponent(window.location.href)}" style="color: white;">
-                Trust Wallet Browser
-              </a>
-            `;
-          }
+        if (window.ethereum) {
+          await connectWallet();
         } else {
-          // Desktop flow
-          if (window.ethereum) {
-            await connectWallet();
-          } else {
-            // No MetaMask - start onboarding
-            onboarding.startOnboarding();
-          }
+          walletOptions.style.display = 'block';
         }
       } catch (error) {
         console.error("Connection error:", error);
@@ -151,12 +183,54 @@
       }
     };
 
+    // Wallet option handlers
+    document.querySelectorAll('.wallet-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        walletOptions.style.display = 'none';
+        const walletType = btn.getAttribute('data-wallet');
+        
+        try {
+          if (walletType === 'metamask') {
+            if (isMobile) {
+              window.location.href = `https://metamask.app.link/browser/${encodeURIComponent(window.location.href)}`;
+            } else if (window.ethereum) {
+              await connectWallet();
+            }
+          } else if (walletType === 'trust') {
+            if (isMobile) {
+              window.location.href = `https://link.trustwallet.com/open_url?url=${encodeURIComponent(window.location.href)}`;
+            } else {
+              alert("Please install Trust Wallet extension for desktop");
+            }
+          } else if (walletType === 'core') {
+            connectCoreWallet();
+          }
+        } catch (error) {
+          console.error(`${walletType} connection error:`, error);
+          alert(`Failed to connect ${walletType}. Please try again.`);
+        }
+      });
+    });
+
     async function connectWallet() {
       const button = document.getElementById('connect');
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const signer = provider.getSigner();
+        let provider;
+        
+        // Check for Core first
+        if (window.avalanche) {
+          provider = window.avalanche;
+        } 
+        // Then check for MetaMask/Trust
+        else if (window.ethereum) {
+          provider = window.ethereum;
+        } else {
+          throw new Error("No wallet provider found");
+        }
+
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
+        const ethersProvider = new ethers.providers.Web3Provider(provider);
+        const signer = ethersProvider.getSigner();
         const address = await signer.getAddress();
 
         document.getElementById('address').innerText = `Connected: ${address}`;
@@ -169,7 +243,7 @@
         }
 
         // Listen for account changes
-        window.ethereum.on('accountsChanged', (accounts) => {
+        provider.on('accountsChanged', (accounts) => {
           if (accounts.length === 0) {
             // Disconnected
             document.getElementById('address').innerText = '';
@@ -193,19 +267,16 @@
     if (window.ethereum?.selectedAddress) {
       document.getElementById('address').innerText = `Connected: ${window.ethereum.selectedAddress}`;
       document.getElementById('connect').innerText = "Disconnect";
+    } else if (window.avalanche?.selectedAddress) {
+      document.getElementById('address').innerText = `Connected: ${window.avalanche.selectedAddress}`;
+      document.getElementById('connect').innerText = "Disconnect";
     }
 
-    // Listen for mobile app installs
-    if (isMobile && !window.ethereum) {
-      window.addEventListener('ethereum#initialized', () => {
-        window.location.reload();
-      }, { once: true });
-      
-      // Timeout check for mobile providers
+    // Mobile detection fallback
+    if (isMobile && !window.ethereum && !window.avalanche) {
       setTimeout(() => {
-        if (!window.ethereum) {
-          warningElement.style.display = 'block';
-          warningElement.textContent = "Please open in a Web3 browser like MetaMask or Trust Wallet";
+        if (!window.ethereum && !window.avalanche) {
+          walletOptions.style.display = 'block';
         }
       }, 1000);
     }
