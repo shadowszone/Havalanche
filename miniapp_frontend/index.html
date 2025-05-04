@@ -6,71 +6,11 @@
   <title>Connect Wallet - Havalanche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/@web3modal/html@3.5.1"></script>
-  <script src="https://unpkg.com/@wagmi/core@2.5.6/dist/index.umd.js"></script>
-  <script src="https://unpkg.com/@web3modal/ethereum@3.5.1/dist/index.umd.js"></script>
+  <!-- Standalone Web3Modal without WalletConnect -->
+  <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.10/dist/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-      color: #ffffff;
-      text-align: center;
-      padding: 40px 20px;
-      animation: fadeIn 1.5s ease-in;
-    }
-
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-    }
-
-    p {
-      font-size: 1rem;
-      margin-bottom: 2rem;
-      color: #d0d0d0;
-    }
-
-    #connect {
-      padding: 12px 28px;
-      font-size: 1rem;
-      font-weight: bold;
-      background-color: #e84142;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-
-    #connect:hover {
-      background-color: #cf3434;
-    }
-
-    .logo {
-      width: 100px;
-      margin: 0 auto 20px;
-      animation: bounce 2s infinite;
-    }
-
-    @keyframes bounce {
-      0%, 100% {
-        transform: translateY(0px);
-      }
-      50% {
-        transform: translateY(-10px);
-      }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    #address {
-      margin-top: 1rem;
-      font-size: 1rem;
-      color: #aaffaa;
-    }
+    /* [Keep all your existing CSS styles] */
   </style>
 </head>
 <body>
@@ -82,43 +22,92 @@
   <div id="address"></div>
 
   <script>
+    // Telegram WebApp integration
     if (window.Telegram && Telegram.WebApp) {
       Telegram.WebApp.ready();
     }
 
-    const { configureChains, createConfig, getAccount, watchAccount } = window.WagmiCore;
-    const { avalanche } = window.WagmiCoreChains;
-    const { EthereumClient, w3mConnectors, w3mProvider } = window.Web3ModalEthereum;
-
-    const projectId = 'b4ab00ce50166394adba378df1461854';
-
-    const chains = [avalanche];
-
-    const { publicClient } = configureChains(chains, [w3mProvider({ projectId })]);
-
-    const wagmiConfig = createConfig({
-      autoConnect: true,
-      connectors: w3mConnectors({ projectId, chains }),
-      publicClient
-    });
-
-    const ethereumClient = new EthereumClient(wagmiConfig, chains);
-
-    const modal = new window.Web3Modal({
-      projectId,
-      themeMode: 'dark',
-      ethereumClient
-    });
-
-    document.getElementById('connect').onclick = () => {
-      modal.openModal();
+    // Standalone Web3Modal Configuration
+    const providerOptions = {
+      /* No WalletConnect option included */
+      metamask: {
+        id: "injected",
+        name: "MetaMask",
+        type: "injected",
+        check: "isMetaMask"
+      },
+      coinbase: {
+        package: window.CoinbaseWalletSDK || null,
+        options: {
+          appName: "Havalanche",
+          infuraId: null // Not needed for Avalanche
+        }
+      }
     };
 
-    watchAccount((account) => {
-      if (account.address) {
-        document.getElementById('address').innerText = `Connected: ${account.address}`;
-        if (window.Telegram && Telegram.WebApp) {
-          Telegram.WebApp.sendData(JSON.stringify({ address: account.address }));
+    const web3Modal = new Web3Modal.default({
+      cacheProvider: true, // Optional
+      providerOptions,
+      theme: {
+        background: "#2c5364",
+        main: "#ffffff",
+        secondary: "#d0d0d0",
+        border: "#0f2027",
+        hover: "#203a43"
+      }
+    });
+
+    // Connection Handler
+    document.getElementById('connect').onclick = async () => {
+      if (web3Modal.cachedProvider) {
+        // Disconnect if already connected
+        await web3Modal.clearCachedProvider();
+        document.getElementById('address').innerText = '';
+        document.getElementById('connect').innerText = "Connect Wallet";
+        return;
+      }
+
+      try {
+        const instance = await web3Modal.connect();
+        const provider = new ethers.providers.Web3Provider(instance);
+        const signer = provider.getSigner();
+        const address = await signer.getAddress();
+
+        document.getElementById('address').innerText = `Connected: ${address}`;
+        document.getElementById('connect').innerText = "Disconnect";
+
+        // Send to Telegram if available
+        if (window.Telegram?.WebApp) {
+          Telegram.WebApp.sendData(JSON.stringify({ address }));
+        }
+
+        // Listen for account changes
+        instance.on("accountsChanged", (accounts) => {
+          if (accounts.length === 0) {
+            // Disconnected
+            document.getElementById('address').innerText = '';
+            document.getElementById('connect').innerText = "Connect Wallet";
+          }
+        });
+
+      } catch (error) {
+        console.error("Connection error:", error);
+      }
+    };
+
+    // Auto-connect on load
+    window.addEventListener('load', async () => {
+      if (web3Modal.cachedProvider) {
+        try {
+          const instance = await web3Modal.connect();
+          const provider = new ethers.providers.Web3Provider(instance);
+          const signer = provider.getSigner();
+          const address = await signer.getAddress();
+          
+          document.getElementById('address').innerText = `Connected: ${address}`;
+          document.getElementById('connect').innerText = "Disconnect";
+        } catch (error) {
+          await web3Modal.clearCachedProvider();
         }
       }
     });
