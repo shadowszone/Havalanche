@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Connect Wallet - Havalanche</title>
+  <title>Connect Wallet</title>
   <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.3/dist/index.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.6.6/dist/umd/index.min.js"></script>
 </head>
 <body>
   <h1>Connect Wallet</h1>
   <button id="connectWallet">Connect Wallet</button>
-  
+
   <script>
     // Web3Modal setup
     const providerOptions = {
@@ -18,16 +18,15 @@
         package: WalletConnectProvider, // WalletConnect provider package
         options: {
           rpc: {
-            43114: "https://api.avax.network/ext/bc/C/rpc" // Avalanche C-Chain RPC URL
+            43114: "https://api.avax.network/ext/bc/C/rpc" // Avalanche RPC URL
           },
-          network: "avalanche",
+          network: "avalanche", // Network name (can be customized)
         }
-      },
-      // Add other wallet providers here (MetaMask, Fortmatic, etc.)
+      }
     };
 
     const web3Modal = new Web3Modal({
-      cacheProvider: true, // Cache the provider to reconnect
+      cacheProvider: true, // Cache the provider for future use
       providerOptions, // Available provider options
     });
 
@@ -35,20 +34,17 @@
     
     connectButton.addEventListener('click', async () => {
       try {
-        // Open Web3Modal
-        const instance = await web3Modal.connect();
-        const web3 = new Web3(instance);  // Web3 instance
+        const instance = await web3Modal.connect();  // Open Web3Modal and connect wallet
+        const web3 = new Web3(instance);  // Web3 instance using the provider
 
-        // Log the connected accounts
-        const accounts = await web3.eth.getAccounts();
-        console.log('Connected accounts:', accounts);
+        const accounts = await web3.eth.getAccounts();  // Get the connected accounts
+        alert('Connected: ' + accounts[0]);  // Alert with the first account
 
-        // Update UI or send the data to Telegram
-        alert(`Connected: ${accounts[0]}`);
+        // Add further code here to handle other interactions, e.g., send the address to your server
 
       } catch (error) {
-        console.error('Connection failed:', error);
-        alert("Failed to connect wallet. Please try again.");
+        console.error('Error connecting wallet:', error);  // Log error to console
+        alert('Connection failed: ' + error.message);  // Show error in alert
       }
     });
   </script>
