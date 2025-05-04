@@ -6,11 +6,52 @@
   <title>Connect Wallet - Havalanche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <!-- Web3Modal and WalletConnect -->
-  <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.0/dist/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.6.6/dist/umd/index.min.js"></script>
   <style>
-    /* Add your styling from before */
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: #ffffff;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 1rem;
+      margin-bottom: 2rem;
+      color: #d0d0d0;
+    }
+
+    #connect {
+      padding: 12px 28px;
+      font-size: 1rem;
+      font-weight: bold;
+      background-color: #e84142;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    #connect:hover {
+      background-color: #cf3434;
+    }
+
+    .logo {
+      width: 100px;
+      margin: 0 auto 20px;
+    }
+
+    #address {
+      margin-top: 1rem;
+      font-size: 1rem;
+      color: #aaffaa;
+    }
   </style>
 </head>
 <body>
@@ -21,135 +62,18 @@
   <button id="connect">Connect Wallet</button>
   <div id="address"></div>
 
-  <!-- QR Modal for WalletConnect -->
-  <div id="qr-modal">
-    <div id="qr-container">
-      <h3 style="color: black;">Scan with your Wallet</h3>
-      <div id="qr-code"></div>
-      <button id="close-qr">Close</button>
-    </div>
-  </div>
-
   <script>
-    // Telegram WebApp integration
-    if (window.Telegram && Telegram.WebApp) {
-      Telegram.WebApp.ready();
-    }
+    document.getElementById('connect').onclick = () => {
+      const externalLink = "https://havalanche.vercel.app/connect-wallet"; // The external URL for Web3Modal flow
 
-    // Web3Modal Setup
-    let web3Modal;
-    let provider;
-
-    // Initialize Web3Modal
-    function initWeb3Modal() {
-      alert("Initializing Web3Modal...");
-      web3Modal = new Web3Modal({
-        cacheProvider: false, // Don't cache provider
-        providerOptions: {
-          walletconnect: {
-            package: WalletConnectProvider,
-            options: {
-              rpc: {
-                43114: "https://api.avax.network/ext/bc/C/rpc", // Avalanche Mainnet
-                43113: "https://api.avax-test.network/ext/bc/C/rpc" // Avalanche Fuji Testnet
-              },
-              chainId: 43114 // Default to Avalanche C-Chain
-            }
-          },
-          // You can add other wallet options here if needed, like Metamask or Coinbase
-        }
-      });
-      alert("Web3Modal initialized.");
-    }
-
-    // Connect Wallet Button Handler
-    document.getElementById('connect').onclick = async () => {
-      alert("Connect button clicked.");
-      try {
-        // Initialize Web3Modal if not done already
-        if (!web3Modal) {
-          initWeb3Modal();
-        }
-
-        // If already connected, disconnect
-        if (provider && provider.close) {
-          alert("Disconnecting wallet...");
-          provider.close();
-          provider = null;
-          document.getElementById('address').innerText = '';
-          document.getElementById('connect').textContent = "Connect Wallet";
-          return;
-        }
-
-        // Get the provider from Web3Modal
-        alert("Attempting to connect wallet...");
-        provider = await web3Modal.connect();
-
-        // Create Web3 instance (optional, if you need Web3 for other actions)
-        const web3 = new Web3(provider);
-
-        // Check if the provider is connected
-        if (provider.connected) {
-          alert("Wallet connected!");
-        } else {
-          alert("Failed to connect wallet.");
-          return;
-        }
-
-        // Listen for events (optional)
-        provider.on("accountsChanged", (accounts) => {
-          alert("Accounts changed: " + accounts);
-          updateUI(accounts[0]);
-        });
-
-        provider.on("chainChanged", (chainId) => {
-          alert("Chain changed to: " + chainId);
-          // Handle chain changes here if needed
-        });
-
-        // Retrieve connected accounts
-        const accounts = await web3.eth.getAccounts();
-        alert("Accounts retrieved: " + accounts);
-        if (accounts.length > 0) {
-          updateUI(accounts[0]);
-        } else {
-          alert("No accounts found.");
-        }
-
-      } catch (error) {
-        alert("Connection error: " + error);
+      // Check if it's a Telegram WebApp, prompt to open the link in an external browser
+      if (window.Telegram && Telegram.WebApp) {
+        Telegram.WebApp.sendData("Please open the link in an external browser to connect your wallet.");
+      } else {
+        // If not Telegram, just open in the browser directly
+        window.open(externalLink, '_blank');
       }
     };
-
-    // Update UI
-    function updateUI(address) {
-      alert("Updating UI with address: " + address);
-      document.getElementById('address').innerText = `Connected: ${address}`;
-      document.getElementById('connect').textContent = "Disconnect";
-      document.getElementById('qr-modal').style.display = 'none';
-      
-      if (window.Telegram?.WebApp) {
-        Telegram.WebApp.sendData(JSON.stringify({ address }));
-      }
-    }
-
-    // Close QR Modal
-    document.getElementById('close-qr').onclick = () => {
-      document.getElementById('qr-modal').style.display = 'none';
-    };
-
-    // Auto-connect if session exists
-    window.addEventListener('load', async () => {
-      alert("Checking if already connected...");
-      if (provider) {
-        const web3 = new Web3(provider);
-        const accounts = await web3.eth.getAccounts();
-        if (accounts.length > 0) {
-          updateUI(accounts[0]);
-        }
-      }
-    });
   </script>
 </body>
 </html>
- 
