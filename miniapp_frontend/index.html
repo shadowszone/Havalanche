@@ -10,7 +10,81 @@
   <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.10/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
-    /* [Keep all your existing CSS styles] */
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: #ffffff;
+      text-align: center;
+      padding: 40px 20px;
+      animation: fadeIn 1.5s ease-in;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 1rem;
+      margin-bottom: 2rem;
+      color: #d0d0d0;
+    }
+
+    #connect {
+      padding: 12px 28px;
+      font-size: 1rem;
+      font-weight: bold;
+      background-color: #e84142;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    #connect:hover {
+      background-color: #cf3434;
+    }
+
+    .logo {
+      width: 100px;
+      margin: 0 auto 20px;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #address {
+      margin-top: 1rem;
+      font-size: 1rem;
+      color: #aaffaa;
+    }
+
+    /* Web3Modal theme adjustments */
+    .web3modal-modal-card {
+      background: #2c5364 !important;
+      border-radius: 12px !important;
+    }
+    
+    .web3modal-provider-container {
+      border: 1px solid #0f2027 !important;
+    }
+    
+    .web3modal-provider-description {
+      color: #d0d0d0 !important;
+    }
   </style>
 </head>
 <body>
@@ -42,11 +116,17 @@
           appName: "Havalanche",
           infuraId: null // Not needed for Avalanche
         }
+      },
+      injected: {
+        display: {
+          name: "Browser Wallet",
+          description: "Connect with your browser's built-in wallet"
+        }
       }
     };
 
     const web3Modal = new Web3Modal.default({
-      cacheProvider: true, // Optional
+      cacheProvider: true,
       providerOptions,
       theme: {
         background: "#2c5364",
@@ -87,11 +167,15 @@
             // Disconnected
             document.getElementById('address').innerText = '';
             document.getElementById('connect').innerText = "Connect Wallet";
+          } else {
+            // Account changed
+            document.getElementById('address').innerText = `Connected: ${accounts[0]}`;
           }
         });
 
       } catch (error) {
         console.error("Connection error:", error);
+        alert("Failed to connect wallet. Please try again.");
       }
     };
 
