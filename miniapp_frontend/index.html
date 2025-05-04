@@ -6,7 +6,6 @@
   <title>Connect Wallet - Havalanche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <!-- Standalone Web3Modal without WalletConnect -->
   <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.10/dist/index.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
@@ -103,24 +102,18 @@
 
     // Standalone Web3Modal Configuration
     const providerOptions = {
-      /* No WalletConnect option included */
-      metamask: {
-        id: "injected",
-        name: "MetaMask",
-        type: "injected",
-        check: "isMetaMask"
+      /* MetaMask and Coinbase Wallet for both Desktop and Mobile */
+      injected: {
+        display: {
+          name: "Browser Wallet",
+          description: "Connect with your browser's built-in wallet (MetaMask, etc.)"
+        }
       },
       coinbase: {
         package: window.CoinbaseWalletSDK || null,
         options: {
           appName: "Havalanche",
           infuraId: null // Not needed for Avalanche
-        }
-      },
-      injected: {
-        display: {
-          name: "Browser Wallet",
-          description: "Connect with your browser's built-in wallet"
         }
       }
     };
