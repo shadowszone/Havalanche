@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Connect Wallet - Havalanche</title>
+  <script src="https://cdn.jsdelivr.net/npm/web3modal"></script>
+  <script src="https://cdn.jsdelivr.net/npm/walletconnect/web3-provider"></script>
+</head>
+<body>
+  <h1>Connect Your Wallet</h1>
+  <button id="connect">Connect Wallet</button>
+
+  <script>
+    const web3Modal = new Web3Modal({
+      cacheProvider: true,
+      providerOptions: {
+        walletconnect: {
+          package: WalletConnectProvider,
+          options: {
+            rpc: {
+              43114: "https://api.avax.network/ext/bc/C/rpc"
+            }
+          }
+        }
+      }
+    });
+
+    document.getElementById('connect').onclick = async () => {
+      try {
+        const instance = await web3Modal.connect();
+        const web3 = new Web3(instance);
+        
+        // Get the user's Ethereum address (or Avalanche address)
+        const accounts = await web3.eth.getAccounts();
+        const address = accounts[0];
+        
+        // Return the address to Telegram through deep link
+        const telegramDeepLink = `tg://resolve?domain=your_telegram_bot&start=address_${address}`;
+        window.location.href = telegramDeepLink; // Redirect to Telegram with the address
+      } catch (error) {
+        console.error("Connection error", error);
+        alert("Failed to connect wallet. Please try again.");
+      }
+    };
+  </script>
+</body>
+</html>
