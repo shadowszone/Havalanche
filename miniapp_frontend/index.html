@@ -6,7 +6,8 @@
   <title>Connect Wallet - Havalanche</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.10/dist/index.js"></script>
+  <!-- Mobile-friendly Web3 Connection -->
+  <script src="https://cdn.jsdelivr.net/npm/@metamask/onboarding@1.0.1/dist/metamask-onboarding.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <style>
     body {
@@ -71,18 +72,13 @@
       color: #aaffaa;
     }
 
-    /* Web3Modal theme adjustments */
-    .web3modal-modal-card {
-      background: #2c5364 !important;
-      border-radius: 12px !important;
-    }
-    
-    .web3modal-provider-container {
-      border: 1px solid #0f2027 !important;
-    }
-    
-    .web3modal-provider-description {
-      color: #d0d0d0 !important;
+    #mobile-warning {
+      display: none;
+      background: #e84142;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 20px auto;
+      max-width: 300px;
     }
   </style>
 </head>
@@ -93,6 +89,7 @@
 
   <button id="connect">Connect Wallet</button>
   <div id="address"></div>
+  <div id="mobile-warning"></div>
 
   <script>
     // Telegram WebApp integration
@@ -100,54 +97,71 @@
       Telegram.WebApp.ready();
     }
 
-    // Standalone Web3Modal Configuration
-    const providerOptions = {
-      /* MetaMask and Coinbase Wallet for both Desktop and Mobile */
-      injected: {
-        display: {
-          name: "Browser Wallet",
-          description: "Connect with your browser's built-in wallet (MetaMask, etc.)"
-        }
-      },
-      coinbase: {
-        package: window.CoinbaseWalletSDK || null,
-        options: {
-          appName: "Havalanche",
-          infuraId: null // Not needed for Avalanche
-        }
-      }
-    };
+    // Mobile detection and handling
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const warningElement = document.getElementById('mobile-warning');
+    let onboarding;
 
-    const web3Modal = new Web3Modal.default({
-      cacheProvider: true,
-      providerOptions,
-      theme: {
-        background: "#2c5364",
-        main: "#ffffff",
-        secondary: "#d0d0d0",
-        border: "#0f2027",
-        hover: "#203a43"
-      }
-    });
+    // Initialize MetaMask onboarding
+    if (!window.ethereum) {
+      onboarding = new MetaMaskOnboarding();
+    }
 
     // Connection Handler
     document.getElementById('connect').onclick = async () => {
-      if (web3Modal.cachedProvider) {
-        // Disconnect if already connected
-        await web3Modal.clearCachedProvider();
+      const button = document.getElementById('connect');
+      
+      if (window.ethereum?.selectedAddress) {
+        // Disconnect
+        window.ethereum.selectedAddress = null;
         document.getElementById('address').innerText = '';
-        document.getElementById('connect').innerText = "Connect Wallet";
+        button.innerText = "Connect Wallet";
         return;
       }
 
       try {
-        const instance = await web3Modal.connect();
-        const provider = new ethers.providers.Web3Provider(instance);
+        if (isMobile) {
+          if (window.ethereum) {
+            await connectWallet();
+          } else {
+            // Mobile without injected provider
+            warningElement.style.display = 'block';
+            warningElement.innerHTML = `
+              Please open in:<br>
+              <a href="https://metamask.app.link/browser/${encodeURIComponent(window.location.href)}" style="color: white;">
+                MetaMask Browser
+              </a><br>or<br>
+              <a href="https://trustwallet.com/browser?url=${encodeURIComponent(window.location.href)}" style="color: white;">
+                Trust Wallet Browser
+              </a>
+            `;
+          }
+        } else {
+          // Desktop flow
+          if (window.ethereum) {
+            await connectWallet();
+          } else {
+            // No MetaMask - start onboarding
+            onboarding.startOnboarding();
+          }
+        }
+      } catch (error) {
+        console.error("Connection error:", error);
+        alert("Failed to connect wallet. Please try again.");
+      }
+    };
+
+    async function connectWallet() {
+      const button = document.getElementById('connect');
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = provider.getSigner();
         const address = await signer.getAddress();
 
         document.getElementById('address').innerText = `Connected: ${address}`;
-        document.getElementById('connect').innerText = "Disconnect";
+        button.innerText = "Disconnect";
+        warningElement.style.display = 'none';
 
         // Send to Telegram if available
         if (window.Telegram?.WebApp) {
@@ -155,11 +169,11 @@
         }
 
         // Listen for account changes
-        instance.on("accountsChanged", (accounts) => {
+        window.ethereum.on('accountsChanged', (accounts) => {
           if (accounts.length === 0) {
             // Disconnected
             document.getElementById('address').innerText = '';
-            document.getElementById('connect').innerText = "Connect Wallet";
+            button.innerText = "Connect Wallet";
           } else {
             // Account changed
             document.getElementById('address').innerText = `Connected: ${accounts[0]}`;
@@ -167,27 +181,34 @@
         });
 
       } catch (error) {
-        console.error("Connection error:", error);
-        alert("Failed to connect wallet. Please try again.");
-      }
-    };
-
-    // Auto-connect on load
-    window.addEventListener('load', async () => {
-      if (web3Modal.cachedProvider) {
-        try {
-          const instance = await web3Modal.connect();
-          const provider = new ethers.providers.Web3Provider(instance);
-          const signer = provider.getSigner();
-          const address = await signer.getAddress();
-          
-          document.getElementById('address').innerText = `Connected: ${address}`;
-          document.getElementById('connect').innerText = "Disconnect";
-        } catch (error) {
-          await web3Modal.clearCachedProvider();
+        if (error.code === 4001) {
+          // User rejected connection
+          alert("Please connect your wallet to continue.");
         }
+        throw error;
       }
-    });
+    }
+
+    // Auto-connect if already connected
+    if (window.ethereum?.selectedAddress) {
+      document.getElementById('address').innerText = `Connected: ${window.ethereum.selectedAddress}`;
+      document.getElementById('connect').innerText = "Disconnect";
+    }
+
+    // Listen for mobile app installs
+    if (isMobile && !window.ethereum) {
+      window.addEventListener('ethereum#initialized', () => {
+        window.location.reload();
+      }, { once: true });
+      
+      // Timeout check for mobile providers
+      setTimeout(() => {
+        if (!window.ethereum) {
+          warningElement.style.display = 'block';
+          warningElement.textContent = "Please open in a Web3 browser like MetaMask or Trust Wallet";
+        }
+      }, 1000);
+    }
   </script>
 </body>
 </html>
