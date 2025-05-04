@@ -42,6 +42,7 @@
 
     // Initialize Web3Modal
     function initWeb3Modal() {
+      alert("Initializing Web3Modal...");
       web3Modal = new Web3Modal({
         cacheProvider: false, // Don't cache provider
         providerOptions: {
@@ -58,10 +59,12 @@
           // You can add other wallet options here if needed, like Metamask or Coinbase
         }
       });
+      alert("Web3Modal initialized.");
     }
 
     // Connect Wallet Button Handler
     document.getElementById('connect').onclick = async () => {
+      alert("Connect button clicked.");
       try {
         // Initialize Web3Modal if not done already
         if (!web3Modal) {
@@ -70,6 +73,7 @@
 
         // If already connected, disconnect
         if (provider && provider.close) {
+          alert("Disconnecting wallet...");
           provider.close();
           provider = null;
           document.getElementById('address').innerText = '';
@@ -78,33 +82,48 @@
         }
 
         // Get the provider from Web3Modal
+        alert("Attempting to connect wallet...");
         provider = await web3Modal.connect();
 
         // Create Web3 instance (optional, if you need Web3 for other actions)
         const web3 = new Web3(provider);
 
+        // Check if the provider is connected
+        if (provider.connected) {
+          alert("Wallet connected!");
+        } else {
+          alert("Failed to connect wallet.");
+          return;
+        }
+
         // Listen for events (optional)
         provider.on("accountsChanged", (accounts) => {
+          alert("Accounts changed: " + accounts);
           updateUI(accounts[0]);
         });
 
         provider.on("chainChanged", (chainId) => {
-          console.log("Chain changed to:", chainId);
+          alert("Chain changed to: " + chainId);
           // Handle chain changes here if needed
         });
 
         // Retrieve connected accounts
         const accounts = await web3.eth.getAccounts();
-        updateUI(accounts[0]);
+        alert("Accounts retrieved: " + accounts);
+        if (accounts.length > 0) {
+          updateUI(accounts[0]);
+        } else {
+          alert("No accounts found.");
+        }
 
       } catch (error) {
-        console.error("Connection error:", error);
-        alert("Failed to connect wallet. Please try again.");
+        alert("Connection error: " + error);
       }
     };
 
     // Update UI
     function updateUI(address) {
+      alert("Updating UI with address: " + address);
       document.getElementById('address').innerText = `Connected: ${address}`;
       document.getElementById('connect').textContent = "Disconnect";
       document.getElementById('qr-modal').style.display = 'none';
@@ -121,6 +140,7 @@
 
     // Auto-connect if session exists
     window.addEventListener('load', async () => {
+      alert("Checking if already connected...");
       if (provider) {
         const web3 = new Web3(provider);
         const accounts = await web3.eth.getAccounts();
