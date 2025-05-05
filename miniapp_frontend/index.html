@@ -1,43 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Mini App - WalletConnect</title>
-    <script src="https://cdn.jsdelivr.net/npm/@w3vm/react@latest/dist/w3vm.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WalletConnect Test</title>
+  <script src="https://unpkg.com/@w3vm/react"></script> <!-- Or use local build if required -->
 </head>
 <body>
-    <h1>Connect Your Wallet</h1>
+  <button id="connectButton">Connect Wallet</button>
 
-    <!-- Button to Connect Wallet -->
-    <button id="connectButton">Connect Wallet</button>
+  <script>
+    // Initialize W3VM
+    const { W3, initW3, Injected, WalletConnect } = window["@w3vm/react"];
 
-    <script>
-        // Set up WalletConnect configuration
-        const projectId = "80e0b203e3b4769d78f3d05e3337d0ae";  // Replace with your WalletConnect Project ID
+    // WalletConnect Project ID
+    const projectId = "80e0b203e3b4769d78f3d05e3337d0ae";  // Replace with your WalletConnect project ID
 
-        // Initialize W3VM
-        const w3vm = new W3VM({
-            connectors: [
-                new W3VM.Injected({ icon: "wallet.png" }),  // Customize icon
-                new W3VM.WalletConnect({ projectId, icon: "walletconnect.svg" })
-            ],
-            SSR: false,  // Set to true if using SSR frameworks like Next.js
+    // Setup W3 connectors (WalletConnect and Injected)
+    const w3props = initW3({
+      connectors: [
+        new Injected({ icon: "path/to/icon.png" }), // Injected wallet (e.g., MetaMask)
+        new WalletConnect({
+          projectId, 
+          icon: "path/to/walletconnect-icon.png",
+          showQrModal: true,
+          chains: [1, 137],  // Ethereum Mainnet and Polygon
+        }),
+      ],
+      SSR: true,
+    });
+
+    // Set up the W3VM context
+    const w3vm = new W3(w3props);
+
+    // Show alert when connectors are initialized
+    alert("W3VM Initialized! Connect a Wallet.");
+
+    // Event listener for the "Connect Wallet" button
+    document.getElementById("connectButton").addEventListener("click", () => {
+      const connector = w3vm.connectors[1];  // Using WalletConnect connector
+
+      // Try to connect to the wallet
+      alert("Attempting to connect to the wallet...");
+
+      connector.connect()
+        .then(() => {
+          // On success, show an alert with the wallet address
+          alert("Wallet Connected!");
+          alert("Connected address: " + connector.getAddress());
+        })
+        .catch(err => {
+          // On failure, show an error alert
+          console.error("Connection failed:", err);
+          alert("Failed to connect wallet: " + err.message);
         });
-
-        // Attach event listener to connect button
-        document.getElementById("connectButton").addEventListener("click", () => {
-            const connector = w3vm.connectors[1];  // Using WalletConnect
-            connector.connect()
-                .then(() => {
-                    alert("Wallet Connected!");
-                    // You can use getW3Address() and getW3Chain() for user info
-                })
-                .catch(err => {
-                    console.error("Connection failed:", err);
-                    alert("Failed to connect wallet.");
-                });
-        });
-    </script>
+    });
+  </script>
 </body>
 </html>
