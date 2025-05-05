@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WalletConnect Test</title>
-  <script src="https://unpkg.com/@w3vm/react"></script> <!-- Or use local build if required -->
+  <script src="https://unpkg.com/@w3vm/react"></script>
 </head>
 <body>
   <button id="connectButton">Connect Wallet</button>
@@ -13,7 +13,7 @@
     // Initialize W3VM
     const { W3, initW3, Injected, WalletConnect } = window["@w3vm/react"];
 
-    // WalletConnect Project ID
+    // WalletConnect Project ID (replace this with your actual Project ID)
     const projectId = "80e0b203e3b4769d78f3d05e3337d0ae";  // Replace with your WalletConnect project ID
 
     // Setup W3 connectors (WalletConnect and Injected)
@@ -37,23 +37,28 @@
     alert("W3VM Initialized! Connect a Wallet.");
 
     // Event listener for the "Connect Wallet" button
-    document.getElementById("connectButton").addEventListener("click", () => {
-      const connector = w3vm.connectors[1];  // Using WalletConnect connector
+    document.getElementById("connectButton").addEventListener("click", async () => {
+      try {
+        alert("Attempting to connect to the wallet...");
 
-      // Try to connect to the wallet
-      alert("Attempting to connect to the wallet...");
+        // Check if WalletConnect is available
+        const walletConnect = w3vm.connectors.find(conn => conn instanceof WalletConnect);
 
-      connector.connect()
-        .then(() => {
+        if (walletConnect) {
+          alert("WalletConnect found, attempting to connect...");
+
+          await walletConnect.connect();
+
           // On success, show an alert with the wallet address
           alert("Wallet Connected!");
-          alert("Connected address: " + connector.getAddress());
-        })
-        .catch(err => {
-          // On failure, show an error alert
-          console.error("Connection failed:", err);
-          alert("Failed to connect wallet: " + err.message);
-        });
+          alert("Connected address: " + walletConnect.getAddress());
+        } else {
+          alert("WalletConnect not found!");
+        }
+      } catch (err) {
+        // On failure, show an error alert
+        alert("Failed to connect wallet: " + err.message);
+      }
     });
   </script>
 </body>
