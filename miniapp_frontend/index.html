@@ -1,81 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Connect Wallet - Havalanche</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-      color: #ffffff;
-      text-align: center;
-      padding: 40px 20px;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <title>Reown AppKit Wallet Connect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-    }
+    <!-- WalletConnect UI Kit -->
+    <script src="https://unpkg.com/@walletconnect/modal@2.0.0-beta.19/dist/index.umd.js"></script>
 
-    p {
-      font-size: 1rem;
-      margin-bottom: 2rem;
-      color: #d0d0d0;
-    }
+    <!-- Reown AppKit UMD (Not yet public, so we simulate via iframe) -->
+    <script type="module">
+      import { createAppKit } from "https://cdn.jsdelivr.net/npm/@reown/appkit@latest/+esm";
 
-    #connect {
-      padding: 12px 28px;
-      font-size: 1rem;
-      font-weight: bold;
-      background-color: #e84142;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
+      createAppKit({
+        projectId: "80e0b203e3b4769d78f3d05e3337d0ae", // replace with your actual project ID from cloud.reown.com
+        adapters: [],
+        networks: ["eip155:1", "eip155:43114"], // mainnet + avalanche
+        metadata: {
+          name: "Reown AppKit Demo",
+          description: "Minimal HTML Wallet Connect",
+          url: "https://yourdomain.com",
+          icons: ["https://avatars.githubusercontent.com/u/37784886"],
+        },
+        features: {
+          email: true,
+          socials: ["google", "x", "github"],
+        },
+        themeMode: "light",
+      });
+    </script>
 
-    #connect:hover {
-      background-color: #cf3434;
-    }
-
-    .logo {
-      width: 100px;
-      margin: 0 auto 20px;
-    }
-
-    #address {
-      margin-top: 1rem;
-      font-size: 1rem;
-      color: #aaffaa;
-    }
-  </style>
-</head>
-<body>
-  <img src="https://havalanche.vercel.app/logo.png" alt="Havalanche Logo" class="logo" />
-  <h1>Welcome to Havalanche</h1>
-  <p>Your decentralized guardian for safe and secure interactions on the Avalanche blockchain.</p>
-
-  <button id="connect">Connect Wallet</button>
-  <div id="address"></div>
-
-  <script>
-    document.getElementById('connect').onclick = () => {
-      const externalLink = 'https://havalanche.vercel.app/connect-wallet.html'; // The external URL for Web3Modal flow
-
-      // Check if it's a Telegram WebApp, prompt to open the link in an external browser
-      if (window.Telegram && Telegram.WebApp) {
-        Telegram.WebApp.sendData("Please open the link in an external browser to connect your wallet.");
-        // Open the external link in a new window/tab
-        window.open(externalLink, '_blank');
-      } else {
-        // If not Telegram, just open in the browser directly
-        window.open(externalLink, '_blank');
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 2rem;
+        background: #f9f9f9;
       }
-    };
-  </script>
-</body>
+    </style>
+  </head>
+  <body>
+    <h1>Connect Your Wallet</h1>
+    <w3m-button></w3m-button>
+  </body>
 </html>
