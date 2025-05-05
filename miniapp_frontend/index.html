@@ -3,69 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WalletConnect Test</title>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@2.0.0-beta.10/dist/umd/index.min.js"></script>
+  <title>Havalanche - Wallet Connection</title>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: white;
+      text-align: center;
+      padding: 2rem;
+    }
+    .logo {
+      width: 100px;
+      margin: 0 auto 20px;
+      animation: bounce 2s infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    #connect {
+      background: #e84142;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 10px 0;
+    }
+    #address {
+      font-family: monospace;
+      color: #aaffaa;
+      margin-top: 1rem;
+      word-break: break-all;
+    }
+  </style>
 </head>
 <body>
-  <button id="connectButton">Connect Wallet</button>
+  <img src="havalanche-logo.png" alt="Havalanche Logo" class="logo">
+  <h1>Welcome to Havalanche</h1>
+  <p>Connect your wallet to get started</p>
+  
+  <button id="connect">Connect Wallet</button>
+  <div id="address"></div>
 
   <script>
-    // Initialize WalletConnect
-    const walletConnect = new WalletConnect.Client({
-      bridge: "https://bridge.walletconnect.org", // WalletConnect Bridge URL
-    });
+    // Simple wallet connection for browsers
+    const connectButton = document.getElementById('connect');
+    const addressDisplay = document.getElementById('address');
+    let connectedWallet = null;
 
-    // Button to trigger wallet connection
-    document.getElementById('connectButton').addEventListener('click', async () => {
-      alert("Attempting to connect to the wallet...");
+    // Supported wallets
+    const WALLETS = {
+      METAMASK: {
+        name: 'MetaMask',
+        check: () => typeof window.ethereum !== 'undefined',
+        connect: async () => {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          return accounts[0];
+        }
+      },
+      CORE: {
+        name: 'Core',
+        check: () => typeof window.avalanche !== 'undefined',
+        connect: async () => {
+          const accounts = await window.avalanche.request({ method: 'eth_requestAccounts' });
+          return accounts[0];
+        }
+      }
+    };
+
+    // Main connection handler
+    connectButton.addEventListener('click', async () => {
+      if (connectedWallet) {
+        disconnectWallet();
+        return;
+      }
 
       try {
-        // Check if the client is already connected
-        if (!walletConnect.connected) {
-          alert("No existing connection, creating new one...");
-          
-          // Create a new WalletConnect session
-          await walletConnect.connect();
-
-          // Display a QR Code for the user to scan with their wallet app
-          alert("Scan the QR Code with your wallet app!");
-          walletConnect.createSession().then(() => {
-            const uri = walletConnect.uri;
-            alert("WalletConnect URI: " + uri);
-            // You can display the URI as a QR code, for example:
-            // document.getElementById('qrCode').innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?data=' + encodeURIComponent(uri) + '" alt="QR Code" />';
-          });
-        } else {
-          alert("Already connected!");
-        }
+        let address;
         
-        // Listen for the connection event
-        walletConnect.on("connect", (error, payload) => {
-          if (error) {
-            alert("Error connecting: " + error);
-            return;
-          }
-          alert("Wallet connected!");
-          const { accounts, chainId } = payload.params[0];
-          alert("Connected address: " + accounts[0]);
-          alert("Connected to chain ID: " + chainId);
-        });
+        // Try Core first
+        if (WALLETS.CORE.check()) {
+          address = await WALLETS.CORE.connect();
+          connectedWallet = 'Core';
+        } 
+        // Fallback to MetaMask
+        else if (WALLETS.METAMASK.check()) {
+          address = await WALLETS.METAMASK.connect();
+          connectedWallet = 'MetaMask';
+        } 
+        else {
+          throw new Error('No supported wallet found');
+        }
 
-        // Listen for the disconnection event
-        walletConnect.on("disconnect", (error, payload) => {
-          if (error) {
-            alert("Error disconnecting: " + error);
-            return;
-          }
-          alert("Wallet disconnected!");
-        });
+        updateUI(address);
       } catch (error) {
-        alert("Error during connection attempt: " + error.message);
+        alert(`Connection failed: ${error.message}`);
       }
     });
-  </script>
 
-  <!-- Optional: Display a QR code if you want to show it on the page -->
-  <!-- <div id="qrCode"></div> -->
+    function updateUI(address) {
+      addressDisplay.textContent = `Connected (${connectedWallet}): ${address}`;
+      connectButton.textContent = 'Disconnect';
+    }
+
+    function disconnectWallet() {
+      connectedWallet = null;
+      addressDisplay.textContent = '';
+      connectButton.textContent = 'Connect Wallet';
+    }
+
+    // Auto-connect if returning from Core Wallet
+    if (window.location.search.includes('wallet=core') && WALLETS.CORE.check()) {
+      connectButton.click();
+    }
+  </script>
 </body>
 </html>
