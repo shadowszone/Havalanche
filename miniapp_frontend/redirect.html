@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get('target');
+    const url = params.get('url');
+    
+    if (target === 'core') {
+      // Proper Core Wallet deep link format
+      window.location.href = `https://core.app/wc?uri=${encodeURIComponent(url)}`;
+    } else {
+      // Generic URL redirect
+      window.location.href = url || 'https://havalanche.vercel.app';
+    }
+  </script>
+</head>
+<body>
+  Redirecting...
+</body>
+</html>
