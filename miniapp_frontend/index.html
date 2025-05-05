@@ -4,62 +4,68 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WalletConnect Test</title>
-  <script src="https://unpkg.com/@w3vm/react"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@2.0.0-beta.10/dist/umd/index.min.js"></script>
 </head>
 <body>
   <button id="connectButton">Connect Wallet</button>
 
   <script>
-    // Initialize W3VM
-    const { W3, initW3, Injected, WalletConnect } = window["@w3vm/react"];
-
-    // WalletConnect Project ID (replace this with your actual Project ID)
-    const projectId = "80e0b203e3b4769d78f3d05e3337d0ae";  // Replace with your WalletConnect project ID
-
-    // Setup W3 connectors (WalletConnect and Injected)
-    const w3props = initW3({
-      connectors: [
-        new Injected({ icon: "path/to/icon.png" }), // Injected wallet (e.g., MetaMask)
-        new WalletConnect({
-          projectId, 
-          icon: "path/to/walletconnect-icon.png",
-          showQrModal: true,
-          chains: [1, 137],  // Ethereum Mainnet and Polygon
-        }),
-      ],
-      SSR: true,
+    // Initialize WalletConnect
+    const walletConnect = new WalletConnect.Client({
+      bridge: "https://bridge.walletconnect.org", // WalletConnect Bridge URL
     });
 
-    // Set up the W3VM context
-    const w3vm = new W3(w3props);
+    // Button to trigger wallet connection
+    document.getElementById('connectButton').addEventListener('click', async () => {
+      alert("Attempting to connect to the wallet...");
 
-    // Show alert when connectors are initialized
-    alert("W3VM Initialized! Connect a Wallet.");
-
-    // Event listener for the "Connect Wallet" button
-    document.getElementById("connectButton").addEventListener("click", async () => {
       try {
-        alert("Attempting to connect to the wallet...");
-
-        // Check if WalletConnect is available
-        const walletConnect = w3vm.connectors.find(conn => conn instanceof WalletConnect);
-
-        if (walletConnect) {
-          alert("WalletConnect found, attempting to connect...");
-
+        // Check if the client is already connected
+        if (!walletConnect.connected) {
+          alert("No existing connection, creating new one...");
+          
+          // Create a new WalletConnect session
           await walletConnect.connect();
 
-          // On success, show an alert with the wallet address
-          alert("Wallet Connected!");
-          alert("Connected address: " + walletConnect.getAddress());
+          // Display a QR Code for the user to scan with their wallet app
+          alert("Scan the QR Code with your wallet app!");
+          walletConnect.createSession().then(() => {
+            const uri = walletConnect.uri;
+            alert("WalletConnect URI: " + uri);
+            // You can display the URI as a QR code, for example:
+            // document.getElementById('qrCode').innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?data=' + encodeURIComponent(uri) + '" alt="QR Code" />';
+          });
         } else {
-          alert("WalletConnect not found!");
+          alert("Already connected!");
         }
-      } catch (err) {
-        // On failure, show an error alert
-        alert("Failed to connect wallet: " + err.message);
+        
+        // Listen for the connection event
+        walletConnect.on("connect", (error, payload) => {
+          if (error) {
+            alert("Error connecting: " + error);
+            return;
+          }
+          alert("Wallet connected!");
+          const { accounts, chainId } = payload.params[0];
+          alert("Connected address: " + accounts[0]);
+          alert("Connected to chain ID: " + chainId);
+        });
+
+        // Listen for the disconnection event
+        walletConnect.on("disconnect", (error, payload) => {
+          if (error) {
+            alert("Error disconnecting: " + error);
+            return;
+          }
+          alert("Wallet disconnected!");
+        });
+      } catch (error) {
+        alert("Error during connection attempt: " + error.message);
       }
     });
   </script>
+
+  <!-- Optional: Display a QR code if you want to show it on the page -->
+  <!-- <div id="qrCode"></div> -->
 </body>
 </html>
