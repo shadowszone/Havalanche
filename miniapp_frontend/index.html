@@ -5,91 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Havalanche</title>
   <script>
-    // 1. Detect Telegram and redirect immediately
+    // 1. Detect and redirect Telegram users properly
     (function() {
       const isTelegram = /Telegram|WebApp/i.test(navigator.userAgent) && 
                         window.Telegram?.WebApp?.initData;
       
       if (isTelegram) {
-        const url = encodeURIComponent(window.location.href);
+        const url = window.location.href.split('#')[0]; // Remove Telegram hash
         const isAndroid = /Android/i.test(navigator.userAgent);
-        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
         
-        // Android Chrome Intent
+        // Android: Open in Chrome with fallback
         if (isAndroid) {
           window.location.href = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
         } 
-        // iOS Universal Link
-        else if (isIOS) {
-          window.location.href = `googlechromes://${url}`;
-          setTimeout(() => {
-            window.location.href = `https://${url}`; // Fallback to Safari
-          }, 500);
+        // iOS: Use universal link pattern
+        else {
+          window.location.href = `https://havalanche.vercel.app/redirect.html?url=${encodeURIComponent(url)}`;
         }
         
-        // Prevent Mini App from loading
         document.write('<style>body{display:none}</style>');
       }
     })();
   </script>
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-      color: white;
-      text-align: center;
-      padding: 2rem;
-    }
-    .logo {
-      width: 100px;
-      margin: 0 auto 20px;
-      animation: bounce 2s infinite;
-    }
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-    #connect {
-      background: #e84142;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-      margin: 10px 0;
-    }
-    #address {
-      font-family: monospace;
-      color: #aaffaa;
-      margin-top: 1rem;
-      word-break: break-all;
-    }
+    /* [Keep all your existing styles] */
   </style>
 </head>
 <body>
-  <img src="havalanche-logo.png" alt="Havalanche Logo" class="logo">
-  <h1>Welcome to Havalanche</h1>
-  <p>Connect your wallet to get started</p>
-  
-  <button id="connect">Connect Wallet</button>
-  <div id="address"></div>
+  <!-- [Keep your existing HTML structure] -->
 
   <script>
-    // 2. Normal Browser Wallet Connection
-    const connectButton = document.getElementById('connect');
-    const addressDisplay = document.getElementById('address');
-    let connectedWallet = null;
-
+    // 2. Updated Wallet Connection Logic
     const WALLETS = {
-      METAMASK: {
-        name: 'MetaMask',
-        check: () => typeof window.ethereum !== 'undefined',
-        connect: async () => {
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          return accounts[0];
-        }
-      },
       CORE: {
         name: 'Core',
         check: () => typeof window.avalanche !== 'undefined',
@@ -97,10 +44,22 @@
           const accounts = await window.avalanche.request({ method: 'eth_requestAccounts' });
           return accounts[0];
         },
-        mobileLink: 'core://wc?uri='
+        getMobileLink: () => {
+          // Use a secure intermediate page for mobile links
+          return `https://havalanche.vercel.app/redirect.html?target=core&url=${encodeURIComponent(window.location.href)}`;
+        }
+      },
+      METAMASK: {
+        name: 'MetaMask',
+        check: () => typeof window.ethereum !== 'undefined',
+        connect: async () => {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          return accounts[0];
+        }
       }
     };
 
+    // 3. Modified Connection Handler
     connectButton.addEventListener('click', async () => {
       if (connectedWallet) {
         disconnectWallet();
@@ -108,40 +67,29 @@
       }
 
       try {
-        let address;
-        
+        // Try direct connection first
         if (WALLETS.CORE.check()) {
-          address = await WALLETS.CORE.connect();
-          connectedWallet = 'Core';
-        } 
-        else if (WALLETS.METAMASK.check()) {
-          address = await WALLETS.METAMASK.connect();
-          connectedWallet = 'MetaMask';
-        }
-        else if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
-          window.location.href = WALLETS.CORE.mobileLink + encodeURIComponent(window.location.href);
+          const address = await WALLETS.CORE.connect();
+          updateUI(address, 'Core');
           return;
         }
-        else {
-          throw new Error('Please install MetaMask or Core Wallet');
+        
+        if (WALLETS.METAMASK.check()) {
+          const address = await WALLETS.METAMASK.connect();
+          updateUI(address, 'MetaMask');
+          return;
         }
 
-        updateUI(address);
+        // Mobile fallback (only if not in Telegram)
+        if (/Android|iPhone|iPad/i.test(navigator.userAgent) && !/Telegram/i.test(navigator.userAgent)) {
+          window.location.href = WALLETS.CORE.getMobileLink();
+        } else {
+          throw new Error('Please install Core Wallet or MetaMask');
+        }
       } catch (error) {
         alert(error.message);
       }
     });
-
-    function updateUI(address) {
-      addressDisplay.textContent = `Connected (${connectedWallet}): ${address}`;
-      connectButton.textContent = 'Disconnect';
-    }
-
-    function disconnectWallet() {
-      connectedWallet = null;
-      addressDisplay.textContent = '';
-      connectButton.textContent = 'Connect Wallet';
-    }
   </script>
 </body>
 </html>
